@@ -1,0 +1,77 @@
+#define BLYNK_TEMPLATE_ID ""
+#define BLYNK_TEMPLATE_NAME ""
+#define BLYNK_AUTH_TOKEN ""
+
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+char ssid[] = "";
+char pass[] = "";
+
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+#define SOIL_PIN 34
+#define RAIN_PIN 35
+
+DHT dht(DHTPIN, DHTTYPE);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+BlynkTimer timer;
+
+void sendData()
+{
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+
+  int soil = analogRead(SOIL_PIN);
+  int rain = analogRead(RAIN_PIN);
+
+  Blynk.virtualWrite(V0, soil);
+  Blynk.virtualWrite(V1, temp);
+  Blynk.virtualWrite(V2, hum);
+  Blynk.virtualWrite(V3, rain);
+
+  String status;
+
+  if (soil < 1500)
+    status = " No Need Water";
+  else
+    status = " Need Water";
+
+  Blynk.virtualWrite(V4, status);
+
+  lcd.clear();
+
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(temp, 1);
+  lcd.print("C H:");
+  lcd.print(hum, 0);
+
+  lcd.setCursor(0, 1);
+  lcd.print(status);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+
+  dht.begin();
+
+  lcd.init();
+  lcd.backlight();
+
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  timer.setInterval(2000L, sendData);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}
